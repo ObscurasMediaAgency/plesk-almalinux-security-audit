@@ -55,3 +55,46 @@ def test_failing_rule_is_reported_not_raised() -> None:
 
     findings, failures = evaluate([], FIXED_NOW, rules=[broken])
     assert findings == [] and failures == ["rule broken failed: KeyError"]
+
+
+def ids(findings: list[Finding]) -> list[str]:
+    return [f.id for f in findings]
+
+
+def test_host_rules_from_fixture(healthy_host_ctx: CollectorContext) -> None:
+    from plesk_audit.collectors import accounts, packages, services
+
+    evidence = [
+        e
+        for mod in (system, packages, services, accounts)
+        for e in mod.collect(healthy_host_ctx).evidence
+    ]
+    findings, failures = evaluate(evidence, FIXED_NOW)
+    assert failures == []
+    by_id = {f.id: f for f in findings}
+    assert set(by_id) == {"PKG-001", "PKG-002", "SVC-001", "ACC-001", "ACC-002", "ACC-003"}
+    assert by_id["PKG-001"].severity == "medium"
+    assert "5.14.0-001.el9.x86_64" in by_id["PKG-002"].summary
+    assert by_id["ACC-001"].severity == "high" and "toor" in by_id["ACC-001"].summary
+    assert by_id["ACC-001"].summary.endswith(": toor.")
+    assert "1 without from=/command=" in by_id["ACC-003"].summary
+
+
+def test_host_rules_quiet_on_clean_evidence() -> None:
+    evidence = [
+        ev("EV-packages-security-updates", {"advisory_count": 0, "by_severity": {}}),
+        ev("EV-packages-installed", {"kernels": [{"release": "5.14.0-1.el9.x86_64"}]}),
+        ev("EV-system-kernel", {"kernel_release": "5.14.0-1.el9.x86_64"}),
+        ev("EV-services-units", {"failed": []}),
+        ev("EV-accounts-local", {"uid0": ["root"]}),
+        ev("EV-accounts-sudoers", {"files": [{"path": "/etc/sudoers", "rules": []}]}),
+        ev("EV-accounts-authorized-keys", {"files": []}),
+    ]
+    findings, failures = evaluate(evidence, FIXED_NOW)
+    assert (findings, failures) == ([], [])
+
+
+def test_low_severity_advisories_only() -> None:
+    data = {"advisory_count": 1, "package_count": 1, "by_severity": {"Moderate": 1}}
+    findings, _ = evaluate([ev("EV-packages-security-updates", data)], FIXED_NOW)
+    assert ids(findings) == ["PKG-001"] and findings[0].severity == "low"

@@ -45,6 +45,39 @@ ALLOWED_COMMANDS: Mapping[str, tuple[str, ...]] = MappingProxyType(
         ),
         # -H no header, -t/-u TCP/UDP, -l listening, -n numeric, -p process (needs root).
         "ss_listening": ("ss", "-H", "-t", "-u", "-l", "-n", "-p"),
+        "rpm_packages": (
+            "rpm",
+            "-qa",
+            "--qf",
+            "%{NAME}\\t%{EPOCHNUM}\\t%{VERSION}\\t%{RELEASE}\\t%{ARCH}\\t%{INSTALLTIME}\\n",
+        ),
+        # -C: cache only, never contacts repositories. dnf may still write its own logs.
+        # VERIFY: output columns of `updateinfo list` on the installed dnf version.
+        "dnf_security_updates": (
+            "dnf",
+            "-q",
+            "-C",
+            "updateinfo",
+            "list",
+            "--security",
+            "--available",
+        ),
+        "systemctl_units": (
+            "systemctl",
+            "list-units",
+            "--type=service,timer",
+            "--all",
+            "--no-legend",
+            "--no-pager",
+            "--plain",
+        ),
+        "systemctl_unit_files": (
+            "systemctl",
+            "list-unit-files",
+            "--type=service,timer",
+            "--no-legend",
+            "--no-pager",
+        ),
     }
 )
 

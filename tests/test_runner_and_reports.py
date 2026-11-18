@@ -30,7 +30,8 @@ def test_run_audit_statuses_and_metadata(healthy_host_ctx: CollectorContext) -> 
     statuses = {c.name: (c.status, c.message) for c in result.collectors}
     assert statuses["system"] == ("ok", None)
     assert statuses["network"][0] == "partial"
-    assert statuses["packages"] == ("skipped", "not implemented yet")
+    assert statuses["packages"] == ("ok", None)
+    assert statuses["web_stack"] == ("skipped", "not implemented yet")
     assert statuses["logs"] == ("skipped", "disabled in configuration")
     assert result.run.hostname == "host.example.test"
     assert result.run.plesk_version == "18.0.82"

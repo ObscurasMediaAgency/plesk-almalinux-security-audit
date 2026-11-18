@@ -1,0 +1,3 @@
+# synthetic: key bodies are placeholders, not real keys
+ssh-ed25519 AAAAPLACEHOLDER1 admin@example.test
+from="192.0.2.10",no-pty ssh-rsa AAAAPLACEHOLDER2 backup@example.test

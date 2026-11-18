@@ -1,0 +1,6 @@
+# Synthetic sudoers fixture
+Defaults    env_reset
+Cmnd_Alias  SVC = /usr/bin/systemctl
+root    ALL=(ALL)       ALL
+%wheel  ALL=(ALL)       ALL
+#includedir /etc/sudoers.d

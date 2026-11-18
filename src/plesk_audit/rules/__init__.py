@@ -6,7 +6,7 @@ from collections.abc import Iterable, Sequence
 from datetime import datetime
 
 from plesk_audit.models import Evidence, Finding
-from plesk_audit.rules import network_rules, system_rules
+from plesk_audit.rules import host_rules, network_rules, system_rules
 from plesk_audit.rules.base import Rule
 
 RULES: Sequence[Rule] = (
@@ -14,6 +14,12 @@ RULES: Sequence[Rule] = (
     system_rules.time_synchronization,
     network_rules.backend_on_wildcard,
     network_rules.wildcard_listener_inventory,
+    host_rules.security_updates,
+    host_rules.kernel_reboot_pending,
+    host_rules.failed_units,
+    host_rules.extra_uid0,
+    host_rules.sudo_nopasswd,
+    host_rules.root_authorized_keys,
 )
 
 

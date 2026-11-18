@@ -1,0 +1,3 @@
+ALSA-2026:0001 Important/Sec. openssh-server-8.7p1-44.el9.x86_64
+ALSA-2026:0001 Important/Sec. openssh-clients-8.7p1-44.el9.x86_64
+ALSA-2026:0002 Moderate/Sec.  bash-5.1.8-10.el9.x86_64
