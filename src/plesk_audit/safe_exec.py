@@ -81,6 +81,10 @@ ALLOWED_COMMANDS: Mapping[str, tuple[str, ...]] = MappingProxyType(
         "firewalld_zones": ("firewall-cmd", "--list-all-zones"),
         # VERIFY: requires root (socket access); output format of fail2ban 1.x.
         "fail2ban_status": ("fail2ban-client", "status"),
+        # VERIFY: requires root; output format on Obsidian 18.0.82. Never use `plesk installer`
+        # (network access) or `plesk db` (database contents).
+        "plesk_version": ("plesk", "version"),
+        "plesk_extensions": ("plesk", "bin", "extension", "--list"),
         "systemctl_unit_files": (
             "systemctl",
             "list-unit-files",

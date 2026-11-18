@@ -213,3 +213,20 @@ def test_firewall_and_fail2ban_and_auditd_rules() -> None:
     accept = [_fw(name="trusted", target="ACCEPT")]
     findings, _ = evaluate(accept, FIXED_NOW)
     assert [f.id for f in findings] == ["FW-002"]
+
+
+@pytest.mark.parametrize(
+    ("evidence", "expected"),
+    [
+        (ev("EV-plesk-version", {"installed": True, "version": "18.0.82.31"}), None),
+        (ev("EV-plesk-version", {"installed": True, "version": "18.0.74.2"}), "Plesk 18.0.74.2"),
+        (ev("EV-system-plesk-version", {"installed": False}), "not installed"),
+        (ev("EV-system-plesk-version", {"installed": True, "version": "18.0.82"}), None),
+    ],
+)
+def test_plesk_release_rule(evidence: Evidence, expected: str | None) -> None:
+    findings, _ = evaluate([evidence], FIXED_NOW)
+    if expected is None:
+        assert findings == []
+    else:
+        assert [f.id for f in findings] == ["PLK-001"] and expected in findings[0].summary

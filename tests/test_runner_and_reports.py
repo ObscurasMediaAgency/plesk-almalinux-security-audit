@@ -34,7 +34,7 @@ def test_run_audit_statuses_and_metadata(healthy_host_ctx: CollectorContext) -> 
     assert statuses["web_stack"] == ("skipped", "not implemented yet")
     assert statuses["logs"] == ("skipped", "disabled in configuration")
     assert result.run.hostname == "host.example.test"
-    assert result.run.plesk_version == "18.0.82"
+    assert result.run.plesk_version == "18.0.82.31"
     assert result.run.read_only is True and result.run.external_checks is False
     assert any(item.startswith("collector network partial") for item in result.limitations)
 

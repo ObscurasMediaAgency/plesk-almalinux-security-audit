@@ -1,0 +1,3 @@
+firewall - Plesk Firewall - 2.2.0-0000
+letsencrypt - Let's Encrypt - 3.2.0-0000
+sslit - SSL It! - 1.16.0-0000

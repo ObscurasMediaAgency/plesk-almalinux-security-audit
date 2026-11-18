@@ -103,7 +103,10 @@ def run_audit(
         finished_at=ctx.now(),
         hostname=_evidence_value(evidence, "EV-system-hostname", "hostname"),
         os=_evidence_value(evidence, "EV-system-os-release", "PRETTY_NAME"),
-        plesk_version=_evidence_value(evidence, "EV-system-plesk-version", "version"),
+        plesk_version=(
+            _evidence_value(evidence, "EV-plesk-version", "version")
+            or _evidence_value(evidence, "EV-system-plesk-version", "version")
+        ),
     )
     return AuditRun(run, results, findings, limitations)
 

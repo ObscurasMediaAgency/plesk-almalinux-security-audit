@@ -6,7 +6,13 @@ from collections.abc import Iterable, Sequence
 from datetime import datetime
 
 from plesk_audit.models import Evidence, Finding
-from plesk_audit.rules import hardening_rules, host_rules, network_rules, system_rules
+from plesk_audit.rules import (
+    hardening_rules,
+    host_rules,
+    network_rules,
+    plesk_rules,
+    system_rules,
+)
 from plesk_audit.rules.base import Rule
 
 RULES: Sequence[Rule] = (
@@ -29,6 +35,7 @@ RULES: Sequence[Rule] = (
     hardening_rules.selinux_not_enforcing,
     hardening_rules.fail2ban_inactive,
     hardening_rules.auditd_inactive,
+    plesk_rules.plesk_matches_target,
 )
 
 

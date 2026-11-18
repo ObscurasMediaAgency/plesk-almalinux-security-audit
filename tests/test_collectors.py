@@ -4,6 +4,7 @@ from plesk_audit.collectors import (
     accounts,
     network,
     packages,
+    plesk,
     security_controls,
     services,
     ssh,
@@ -240,3 +241,36 @@ def test_parse_zones_rejects_garbage() -> None:
         security_controls.parse_zones("  target: default\n")
     with pytest.raises(ValueError):
         security_controls.parse_fail2ban_status("Sorry, permission denied\n")
+
+
+def test_plesk_version_and_extensions(healthy_host_ctx: CollectorContext) -> None:
+    result = plesk.collect(healthy_host_ctx)
+    assert (result.status, result.message) == ("ok", None)
+    data = {e.evidence_id: e.data for e in result.evidence}
+    version = data["EV-plesk-version"]
+    assert (version["installed"], version["version"]) == (True, "18.0.82.31")
+    assert version["os"] == "AlmaLinux 9.9 x86_64"
+    assert data["EV-plesk-extensions"]["extensions"][1] == {
+        "id": "letsencrypt",
+        "name": "Let's Encrypt",
+        "version": "3.2.0-0000",
+    }
+
+
+def test_plesk_not_installed_is_observation() -> None:
+    result = plesk.collect(make_ctx())
+    assert result.status == "ok"
+    assert [e.data for e in result.evidence] == [{"installed": False}]
+
+
+def test_plesk_unparsable_output() -> None:
+    ctx = make_ctx(
+        commands={
+            "plesk_version": "something unexpected\n",
+            "plesk_extensions": "firewall  Plesk Firewall  2.2.0\n!!! garbage\n",
+        }
+    )
+    result = plesk.collect(ctx)
+    assert result.status == "partial"
+    assert result.message == "plesk_version: unparsable; plesk_extensions: 1 unparsable line(s)"
+    assert result.evidence[0].data["extensions"][0]["name"] == "Plesk Firewall"

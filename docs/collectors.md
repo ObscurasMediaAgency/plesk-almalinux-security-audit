@@ -73,6 +73,16 @@ Implemented collectors, their sources, required privileges and collected data. C
 - `firewall-cmd --state` exit code 252 is recorded as "not running"; a missing `fail2ban-client` as "not installed".
 - **VERIFY:** firewalld zone header format (`public (active)` / `(default, active)`), exit code 252 and `fail2ban-client status` output on the installed build. Plesk Firewall on EL9 is assumed to apply its rules via firewalld.
 
+## `plesk`
+| Evidence ID | Source | Data |
+|---|---|---|
+| `EV-plesk-version` | `plesk version` | installed flag, product string, version, OS version, build date, revision |
+| `EV-plesk-extensions` | `plesk bin extension --list` | extension ID, name, version; count |
+
+- Privileges: root; otherwise `error`. A missing `plesk` binary is recorded as `installed: false`.
+- Never used: `plesk installer` (network access), `plesk db` (database contents), password/admin utilities.
+- **VERIFY:** output format of both commands on Obsidian 18.0.82.31 (assumed `Key: value` lines and `id - name - version` lines). Unrecognised extension lines are counted and reported as `partial`.
+
 ## Rules
 | ID | Evidence | Severity | Condition |
 |---|---|---|---|
@@ -95,3 +105,4 @@ Implemented collectors, their sources, required privileges and collected data. C
 | `SEC-001` | selinux | medium if disabled, low if permissive or not enforcing after reboot | SELinux not enforcing |
 | `SEC-002` | units + fail2ban | medium if `fail2ban.service` is inactive/absent, low if no jail name contains `ssh` | Fail2Ban not protecting SSH |
 | `SEC-003` | units | low | `auditd.service` inactive or absent |
+| `PLK-001` | plesk version (CLI, else version file) | info / needs_review | Plesk not installed or release differs from 18.0.82 |

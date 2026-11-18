@@ -96,6 +96,8 @@ def healthy_host_ctx() -> CollectorContext:
             "firewalld_default_zone": "public\n",
             "firewalld_zones": fixture_text("firewalld-list-all-zones.txt"),
             "fail2ban_status": fixture_text("fail2ban-status.txt"),
+            "plesk_version": fixture_text("plesk-version-cli.txt"),
+            "plesk_extensions": fixture_text("plesk-extensions.txt"),
         },
         files={
             "/etc/os-release": fixture_text("os-release-almalinux-9.9.txt"),

@@ -1,0 +1,4 @@
+Product version: Plesk Obsidian 18.0.82.31
+    OS version: AlmaLinux 9.9 x86_64
+    Build date: 2026/01/01 00:00
+      Revision: 0000000000000000000000000000000000000000
