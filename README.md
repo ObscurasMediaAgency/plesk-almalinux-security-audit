@@ -58,7 +58,7 @@ plesk-audit external --config config/audit.yml --confirm-authorized [--output /s
 Reports are written to a new `run-<timestamp>-<id>/` directory (mode `0700`, files `0600`); existing runs are never overwritten. Exit codes: `0` success, `1` output error, `2` configuration error.
 
 ## Status
-Implemented: safe command runner, bounded file reader, strict config validation, `system`, `packages`, `services`, `network`, `accounts`, `ssh`, `security_controls` and `plesk` collectors, triage-profile `persistence` and `logs` collectors, opt-in `external` validation command, first finding rules, JSON and HTML reporting. All other collectors report `skipped` (`not implemented yet`). See `docs/collectors.md` for sources, privileges and data. Validate on a test VM before running on production.
+Implemented: safe command runner, bounded file reader, strict config validation, `system`, `packages`, `services`, `network`, `accounts`, `ssh`, `security_controls` and `plesk` collectors, triage-profile `persistence` and `logs` collectors, opt-in `external` validation command, first finding rules, JSON and HTML reporting. All other collectors report `skipped` (`not implemented yet`). See `docs/collectors.md` for sources, privileges and data. Validate on a test VM (checklist in `docs/runbook.md`) before running on production.
 
 ## Planned audit domains
 1. Host baseline: OS, kernel, uptime, time synchronization.
@@ -93,6 +93,6 @@ Do not commit real production reports. Reports may contain hostnames, IP address
 5. ~~Bounded log triage and compromise indicators.~~ Done (`--profile triage`).
 6. JSON/HTML reporting and tests. (Initial version done.)
 7. ~~Explicitly opt-in external validation.~~ Done (`plesk-audit external`).
-8. Validation on a disposable AlmaLinux 9.9 + Plesk VM.
+8. Validation on a disposable AlmaLinux 9.9 + Plesk VM. (Checklist in `docs/runbook.md`; execution pending.)
 
 Internal project scaffold; add an explicit license before distribution.
