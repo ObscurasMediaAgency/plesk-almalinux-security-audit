@@ -1,0 +1,36 @@
+
+audit:
+  profile: baseline
+  read_only: true
+  external_checks: false
+runtime:
+  command_timeout_seconds: 10
+  max_command_output_bytes: 200000
+  max_file_bytes: 1000000
+output:
+  directory: ./reports
+  formats: [json, html]
+  redact_sensitive_values: true
+collectors:
+  system: true
+  packages: true
+  services: true
+  network: true
+  accounts: true
+  security_controls: true
+  ssh: true
+  plesk: true
+  web_stack: true
+  logs: false
+logs:
+  enabled: false
+  lookback_hours: 24
+  max_lines_per_source: 2000
+  sources:
+    - /var/log/secure
+    - /var/log/messages
+    - /var/log/maillog
+external:
+  allowed_targets: []
+  nmap_enabled: false
+  tls_test_enabled: false

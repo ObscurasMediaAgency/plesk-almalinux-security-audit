@@ -1,0 +1,10 @@
+udp   UNCONN 0      0          127.0.0.1:323        0.0.0.0:*    users:(("chronyd",pid=801,fd=5))
+udp   UNCONN 0      0      127.0.0.53%lo:53         0.0.0.0:*    users:(("systemd-resolve",pid=700,fd=13))
+tcp   LISTEN 0      511          0.0.0.0:80         0.0.0.0:*    users:(("nginx",pid=1201,fd=6),("nginx",pid=1200,fd=6))
+tcp   LISTEN 0      511             [::]:80            [::]:*    users:(("nginx",pid=1200,fd=7))
+tcp   LISTEN 0      128          0.0.0.0:22         0.0.0.0:*    users:(("sshd",pid=900,fd=3))
+tcp   LISTEN 0      80                 *:3306             *:*    users:(("mariadbd",pid=1500,fd=21))
+tcp   LISTEN 0      511        127.0.0.1:7080       0.0.0.0:*    users:(("httpd",pid=1300,fd=4))
+tcp   LISTEN 0      244        192.0.2.10:8443      0.0.0.0:*
+tcp   LISTEN 0      4096   [fe80::1]%eth0:546          [::]:*
+this line is garbage
