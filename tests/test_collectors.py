@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import pytest
+
 from plesk_audit.collectors import (
     accounts,
+    logs,
     network,
     packages,
+    persistence,
     plesk,
     security_controls,
     services,
@@ -11,7 +15,7 @@ from plesk_audit.collectors import (
     system,
 )
 from plesk_audit.collectors.base import CollectorContext
-from plesk_audit.file_reader import FileReadResult
+from plesk_audit.file_reader import DirListResult, FileReadResult
 from plesk_audit.safe_exec import CommandResult
 from tests.conftest import dir_entry, fixture_text, make_ctx
 
@@ -274,3 +278,103 @@ def test_plesk_unparsable_output() -> None:
     assert result.status == "partial"
     assert result.message == "plesk_version: unparsable; plesk_extensions: 1 unparsable line(s)"
     assert result.evidence[0].data["extensions"][0]["name"] == "Plesk Firewall"
+
+
+def _log_ctx(
+    monkeypatch: pytest.MonkeyPatch, files: dict[str, str | FileReadResult]
+) -> CollectorContext:
+    import dataclasses
+    from datetime import UTC
+
+    from plesk_audit.config import LogsConfig
+
+    monkeypatch.setattr(logs, "local_timezone", lambda: UTC)
+    settings = LogsConfig(True, 24, 1000, ("/var/log/secure", "/var/log/maillog"))
+    return dataclasses.replace(make_ctx(files=files), logs=settings)
+
+
+def test_logs_aggregate_without_sensitive_text(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctx = _log_ctx(
+        monkeypatch,
+        {
+            "/var/log/secure": fixture_text("secure.log"),
+            "/var/log/maillog": fixture_text("maillog.log"),
+        },
+    )
+    result = logs.collect(ctx)
+    assert (result.status, result.message) == ("ok", None)
+    data = {e.evidence_id: e.data for e in result.evidence}
+    ssh_auth = data["EV-logs-ssh-auth"]
+    assert (ssh_auth["failed_total"], ssh_auth["invalid_user_total"]) == (6, 1)
+    assert ssh_auth["failed_by_ip"] == [{"ip": "192.0.2.50", "count": 6}]
+    assert ssh_auth["failed_by_user"] == [{"user": "root", "count": 5}]
+    assert [(a["user"], a["ip"], a["method"], a["count"]) for a in ssh_auth["accepted"]] == [
+        ("alice", "2001:db8::10", "publickey", 2),
+        ("root", "192.0.2.50", "password", 1),
+    ]
+    assert data["EV-logs-sudo"]["by_user"] == [{"user": "alice", "count": 1}]
+    assert data["EV-logs-mail-auth"]["failed_by_ip"] == [{"ip": "198.51.100.7", "count": 2}]
+    secure = data["EV-logs-sources"]["sources"][0]
+    assert (secure["lines_in_window"], secure["lines_without_timestamp"]) == (11, 1)
+    assert secure["covers_window"] is True
+    assert ctx.files.tail_reads == ["/var/log/secure", "/var/log/maillog"]  # type: ignore[attr-defined]
+    rendered = repr(result)
+    for secret in ("example-secret-file", "admin", "info@example.test", "placeholder"):
+        assert secret not in rendered
+
+
+def test_logs_truncated_read_reports_coverage_gap(monkeypatch: pytest.MonkeyPatch) -> None:
+    content = "cut line\nJan  2 03:00:00 host sshd[1]: Failed password for root from 192.0.2.9 port 1 ssh2\n"
+    ctx = _log_ctx(
+        monkeypatch,
+        {"/var/log/secure": FileReadResult("/var/log/secure", "ok", content, truncated=True)},
+    )
+    result = logs.collect(ctx)
+    assert result.status == "partial"
+    assert result.message == "/var/log/secure: read limit reached before start of lookback window"
+    sources = result.evidence[0].data["sources"]
+    assert sources[0]["lines_without_timestamp"] == 0
+
+
+def test_logs_without_settings_is_error() -> None:
+    assert logs.collect(make_ctx()).status == "error"
+
+
+def test_logs_without_existing_sources_is_partial(monkeypatch: pytest.MonkeyPatch) -> None:
+    result = logs.collect(_log_ctx(monkeypatch, {}))
+    assert (result.status, result.message) == (
+        "partial",
+        "none of the configured log sources exist",
+    )
+
+
+def test_syslog_year_rollover() -> None:
+    from datetime import UTC, datetime
+
+    now = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
+    ts = logs.parse_timestamp("Dec 31 23:59:59 host x: y", now, UTC)
+    assert ts == datetime(2025, 12, 31, 23, 59, 59, tzinfo=UTC)
+    assert logs.parse_timestamp("Foo 31 23:59:59 host", now, UTC) is None
+
+
+def test_persistence_metadata_only() -> None:
+    ctx = make_ctx(
+        files={"/etc/ld.so.preload": "# comment\n/usr/lib64/libexample.so\n"},
+        dirs={
+            "/etc/cron.d": [dir_entry("0hourly"), dir_entry("evil", mode="0666")],
+            "/etc/systemd/system": [dir_entry("multi-user.target.wants", kind="dir", mode="0755")],
+            "/var/spool/cron": DirListResult("/var/spool/cron", "permission_denied"),
+        },
+    )
+    result = persistence.collect(ctx)
+    assert result.status == "partial"
+    assert result.message == "/var/spool/cron: permission_denied"
+    data = {e.evidence_id: e.data for e in result.evidence}
+    cron = data["EV-persistence-cron"]["directories"]
+    assert [d["path"] for d in cron] == ["/etc/cron.d"]
+    assert [e["name"] for e in cron[0]["entries"]] == ["0hourly", "evil"]
+    assert data["EV-persistence-ld-preload"] == {
+        "present": True,
+        "libraries": ["/usr/lib64/libexample.so"],
+    }
+    assert "EV-persistence-profile" not in data

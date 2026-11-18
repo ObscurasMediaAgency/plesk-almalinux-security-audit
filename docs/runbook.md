@@ -3,7 +3,7 @@
 
 Before running: confirm authorization, exact target, backup/snapshot, maintenance constraints, enabled collectors and restricted report storage.
 
-Start with a local baseline, no external checks and no log triage. Review collector errors and limitations. Enable bounded log triage only after reviewing source paths and retention windows. Preserve original logs. Validate high-severity findings manually and compare against a known-good baseline. Never commit production reports to source control.
+Start with a local baseline, no external checks and no log triage. Review collector errors and limitations. Enable bounded log triage only after reviewing source paths and retention windows: set `collectors.logs: true` and `logs.enabled: true`, then run with `--profile triage` (persistence metadata is also collected only in this profile). Preserve original logs. Validate high-severity findings manually and compare against a known-good baseline. Never commit production reports to source control.
 
 ## Running
 ```bash

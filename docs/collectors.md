@@ -83,6 +83,31 @@ Implemented collectors, their sources, required privileges and collected data. C
 - Never used: `plesk installer` (network access), `plesk db` (database contents), password/admin utilities.
 - **VERIFY:** output format of both commands on Obsidian 18.0.82.31 (assumed `Key: value` lines and `id - name - version` lines). Unrecognised extension lines are counted and reported as `partial`.
 
+## `persistence` (profile `triage`)
+| Evidence ID | Source | Data |
+|---|---|---|
+| `EV-persistence-cron` | `/etc/cron.d`, `/etc/cron.{hourly,daily,weekly,monthly}`, `/var/spool/cron` | per entry: name, type, mode, UID/GID, size, mtime |
+| `EV-persistence-systemd` | `/etc/systemd/system` | same metadata (top level only) |
+| `EV-persistence-profile` | `/etc/profile.d` | same metadata |
+| `EV-persistence-ld-preload` | `/etc/ld.so.preload` | present flag, preloaded library paths |
+
+- Privileges: root for `/var/spool/cron`; otherwise `partial`.
+- Metadata only: no recursion, symlinked directories are refused, at most 1000 entries per directory. Crontab and unit file contents are not read because they may embed credentials.
+
+## `logs` (profile `triage` and `logs.enabled: true`)
+| Evidence ID | Source | Data |
+|---|---|---|
+| `EV-logs-sources` | configured `logs.sources` | lookback window, per source: lines considered/in window/without timestamp, read limit hit, earliest timestamp, window coverage |
+| `EV-logs-ssh-auth` | `/var/log/secure` patterns | failed SSH attempts total and top 20 per IP and per existing account, invalid-user attempt count, accepted logins aggregated by user/IP/method with first/last time (max. 100) |
+| `EV-logs-sudo` | `/var/log/secure` patterns | sudo invocations per invoking user (top 20) |
+| `EV-logs-mail-auth` | `/var/log/maillog` patterns | failed Postfix SASL / Dovecot logins total and top 20 per IP |
+
+- Allowed sources: `/var/log/secure`, `/var/log/messages`, `/var/log/maillog` only (enforced by config validation and the file allow-list). Rotated files are not read.
+- Bounds: the last `runtime.max_file_bytes` of each file, then the last `logs.max_lines_per_source` lines, filtered to `logs.lookback_hours`. If the read limit is reached before the window start, the collector reports `partial`.
+- Never stored: message bodies, sudo commands, usernames from invalid-user attempts (often mistyped passwords), mailbox names, key fingerprints.
+- Timestamps: classic syslog timestamps are interpreted in the host's local timezone with year inference; RFC 3339 timestamps are also accepted.
+- **VERIFY:** rsyslog timestamp format and the sshd/sudo/Postfix/Dovecot message formats on the installed build.
+
 ## Rules
 | ID | Evidence | Severity | Condition |
 |---|---|---|---|
@@ -106,3 +131,10 @@ Implemented collectors, their sources, required privileges and collected data. C
 | `SEC-002` | units + fail2ban | medium if `fail2ban.service` is inactive/absent, low if no jail name contains `ssh` | Fail2Ban not protecting SSH |
 | `SEC-003` | units | low | `auditd.service` inactive or absent |
 | `PLK-001` | plesk version (CLI, else version file) | info / needs_review | Plesk not installed or release differs from 18.0.82 |
+| `LOG-001` | ssh-auth | medium / needs_review | accepted root login via password or keyboard-interactive |
+| `LOG-002` | ssh-auth | low | ≥ 100 failed/invalid SSH attempts or ≥ 20 from one IP in the window |
+| `LOG-003` | ssh-auth | medium / needs_review, low confidence | accepted login from an IP with ≥ 5 failures in the window |
+| `LOG-004` | mail-auth | low | ≥ 100 failed mail logins in the window |
+| `PER-001` | ld-preload | high / needs_review | `/etc/ld.so.preload` lists libraries |
+| `PER-002` | cron/systemd/profile | info / needs_review, low confidence | files or symlinks modified in the last 7 days |
+| `PER-003` | cron/systemd/profile | medium / needs_review | world-writable entries, or non-root owned entries outside `/var/spool/cron` |

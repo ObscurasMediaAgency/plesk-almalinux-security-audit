@@ -7,8 +7,10 @@ from types import MappingProxyType
 
 from plesk_audit.collectors import (
     accounts,
+    logs,
     network,
     packages,
+    persistence,
     plesk,
     security_controls,
     services,
@@ -27,6 +29,8 @@ IMPLEMENTED: Mapping[str, CollectorFn] = MappingProxyType(
         security_controls.NAME: security_controls.collect,
         ssh.NAME: ssh.collect,
         plesk.NAME: plesk.collect,
+        persistence.NAME: persistence.collect,
+        logs.NAME: logs.collect,
     }
 )
 

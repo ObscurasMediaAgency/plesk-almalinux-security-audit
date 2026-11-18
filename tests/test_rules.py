@@ -230,3 +230,77 @@ def test_plesk_release_rule(evidence: Evidence, expected: str | None) -> None:
         assert findings == []
     else:
         assert [f.id for f in findings] == ["PLK-001"] and expected in findings[0].summary
+
+
+def test_triage_rules_from_log_evidence() -> None:
+    ssh_auth = {
+        "failed_total": 6,
+        "invalid_user_total": 1,
+        "failed_by_ip": [{"ip": "192.0.2.50", "count": 6}],
+        "accepted": [
+            {"user": "root", "ip": "192.0.2.50", "method": "password", "count": 1},
+            {"user": "alice", "ip": "2001:db8::10", "method": "publickey", "count": 2},
+        ],
+    }
+    findings, failures = evaluate([ev("EV-logs-ssh-auth", ssh_auth)], FIXED_NOW)
+    assert failures == []
+    by_id = {f.id: f for f in findings}
+    assert set(by_id) == {"LOG-001", "LOG-003"}
+    assert "192.0.2.50 (1x)" in by_id["LOG-001"].summary
+    assert by_id["LOG-003"].summary == "root from 192.0.2.50 via password after 6 failures."
+
+
+def test_brute_force_thresholds() -> None:
+    noisy = {"failed_total": 90, "invalid_user_total": 20, "failed_by_ip": [], "accepted": []}
+    mail = {"failed_total": 150, "failed_by_ip": [{"ip": "198.51.100.7", "count": 150}]}
+    findings, _ = evaluate(
+        [ev("EV-logs-ssh-auth", noisy), ev("EV-logs-mail-auth", mail)], FIXED_NOW
+    )
+    assert [f.id for f in findings] == ["LOG-002", "LOG-004"]
+    assert findings[0].summary.startswith("110 failed/invalid")
+    quiet = {"failed_total": 5, "failed_by_ip": [{"ip": "192.0.2.1", "count": 5}], "accepted": []}
+    findings, _ = evaluate([ev("EV-logs-ssh-auth", quiet)], FIXED_NOW)
+    assert findings == []
+
+
+def _entry(name: str, mode: str = "0644", uid: int = 0, days_old: int = 30) -> dict[str, Any]:
+    from datetime import timedelta
+
+    return {
+        "name": name,
+        "kind": "file",
+        "mode": mode,
+        "uid": uid,
+        "mtime": FIXED_NOW - timedelta(days=days_old),
+    }
+
+
+def test_persistence_rules() -> None:
+    cron = {
+        "directories": [
+            {
+                "path": "/etc/cron.d",
+                "entries": [_entry("0hourly"), _entry("x", mode="0666", days_old=1)],
+            },
+            {"path": "/var/spool/cron", "entries": [_entry("alice", mode="0600", uid=1000)]},
+        ]
+    }
+    systemd = {
+        "directories": [{"path": "/etc/systemd/system", "entries": [_entry("a.service", uid=1000)]}]
+    }
+    evidence = [
+        ev("EV-persistence-cron", cron),
+        ev("EV-persistence-systemd", systemd),
+        ev("EV-persistence-ld-preload", {"present": True, "libraries": ["/tmp/x.so"]}),
+    ]
+    findings, failures = evaluate(evidence, FIXED_NOW)
+    assert failures == []
+    by_id = {f.id: f for f in findings}
+    assert set(by_id) == {"PER-001", "PER-002", "PER-003"}
+    assert by_id["PER-001"].severity == "high"
+    assert by_id["PER-002"].summary.endswith(": /etc/cron.d/x")
+    assert by_id["PER-003"].summary == (
+        "/etc/cron.d/x (world-writable); /etc/systemd/system/a.service (owned by UID 1000)"
+    )
+    empty = [ev("EV-persistence-ld-preload", {"present": False, "libraries": []})]
+    assert evaluate(empty, FIXED_NOW) == ([], [])

@@ -12,6 +12,7 @@ from plesk_audit.rules import (
     network_rules,
     plesk_rules,
     system_rules,
+    triage_rules,
 )
 from plesk_audit.rules.base import Rule
 
@@ -36,6 +37,13 @@ RULES: Sequence[Rule] = (
     hardening_rules.fail2ban_inactive,
     hardening_rules.auditd_inactive,
     plesk_rules.plesk_matches_target,
+    triage_rules.root_password_login,
+    triage_rules.ssh_brute_force,
+    triage_rules.login_after_failures,
+    triage_rules.mail_brute_force,
+    triage_rules.ld_preload,
+    triage_rules.recent_persistence_changes,
+    triage_rules.unsafe_persistence_permissions,
 )
 
 

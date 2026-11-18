@@ -12,6 +12,8 @@ from typing import Any
 
 import yaml
 
+from plesk_audit.file_reader import KNOWN_LOG_FILES
+
 PROFILES = ("baseline", "triage")
 OUTPUT_FORMATS = frozenset({"json", "html"})
 KNOWN_COLLECTORS = (
@@ -24,6 +26,7 @@ KNOWN_COLLECTORS = (
     "ssh",
     "plesk",
     "web_stack",
+    "persistence",
     "logs",
 )
 MAX_CONFIG_BYTES = 64 * 1024
@@ -127,9 +130,9 @@ def parse_config(raw: object) -> AuditConfig:
     lg = _section(raw, "logs", {"enabled", "lookback_hours", "max_lines_per_source", "sources"})
     sources = lg.get("sources")
     if not isinstance(sources, list) or not all(
-        isinstance(s, str) and s.startswith("/var/log/") and ".." not in s for s in sources
+        isinstance(s, str) and s in KNOWN_LOG_FILES for s in sources
     ):
-        raise ConfigError("'logs.sources' must be a list of absolute paths below /var/log/")
+        raise ConfigError(f"'logs.sources' must be a list from {sorted(KNOWN_LOG_FILES)}")
     logs = LogsConfig(
         enabled=_bool(lg, "enabled", "logs"),
         lookback_hours=_int(lg, "lookback_hours", "logs", 1, 24 * 90),

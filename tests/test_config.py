@@ -37,6 +37,7 @@ def test_repository_config_is_valid() -> None:
         ("runtime", "max_file_bytes", True),
         ("logs", "sources", ["/etc/shadow"]),
         ("logs", "sources", ["/var/log/../../etc/shadow"]),
+        ("logs", "sources", ["/var/log/httpd/access_log"]),
         ("external", "allowed_targets", ["192.0.2.1"]),
         ("external", "nmap_enabled", True),
         ("collectors", "unknown_collector", True),

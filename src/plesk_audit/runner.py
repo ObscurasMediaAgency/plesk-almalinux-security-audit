@@ -43,6 +43,8 @@ def _skip_reason(name: str, config: AuditConfig, profile: str) -> str | None:
     """Return why a collector is skipped, or None if it should run."""
     if not config.collectors.get(name, False):
         return "disabled in configuration"
+    if name == "persistence" and profile != "triage":
+        return "requires profile 'triage'"
     if name == "logs" and (profile != "triage" or not config.logs.enabled):
         return "log triage requires profile 'triage' and logs.enabled"
     return None
@@ -139,6 +141,7 @@ def collect(
         ),
         files=BoundedFileReader(config.runtime.max_file_bytes),
         now=now,
+        logs=config.logs,
     )
     audit = run_audit(config, ctx, profile=profile)
     return write_reports(audit, output_dir or config.output_directory, config.output_formats)

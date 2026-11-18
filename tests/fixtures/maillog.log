@@ -1,0 +1,2 @@
+Jan  1 08:00:00 host postfix/smtpd[200]: warning: unknown[198.51.100.7]: SASL LOGIN authentication failed: authentication failure
+Jan  1 08:00:01 host dovecot[201]: imap-login: Disconnected (auth failed, 1 attempts in 2 secs): user=<info@example.test>, method=PLAIN, rip=198.51.100.7, lip=192.0.2.1

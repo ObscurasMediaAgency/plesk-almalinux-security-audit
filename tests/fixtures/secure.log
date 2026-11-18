@@ -1,0 +1,13 @@
+Dec 30 10:00:00 host sshd[100]: Failed password for root from 192.0.2.50 port 1000 ssh2
+Jan  1 04:00:00 host sshd[101]: Invalid user admin from 192.0.2.50 port 1001
+Jan  1 04:00:01 host sshd[101]: Failed password for invalid user admin from 192.0.2.50 port 1001 ssh2
+Jan  1 04:00:05 host sshd[102]: Failed password for root from 192.0.2.50 port 1002 ssh2
+Jan  1 04:00:06 host sshd[102]: Failed password for root from 192.0.2.50 port 1002 ssh2
+Jan  1 04:00:07 host sshd[102]: Failed password for root from 192.0.2.50 port 1002 ssh2
+Jan  1 04:00:08 host sshd[102]: Failed password for root from 192.0.2.50 port 1002 ssh2
+Jan  1 04:00:09 host sshd[102]: Failed password for root from 192.0.2.50 port 1002 ssh2
+Jan  1 05:00:00 host sshd[103]: Accepted password for root from 192.0.2.50 port 1003 ssh2
+Jan  1 06:00:00 host sshd[104]: Accepted publickey for alice from 2001:db8::10 port 1004 ssh2: ED25519 SHA256:placeholder
+Jan  1 06:01:00 host sudo[105]:    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/cat /etc/example-secret-file
+2026-01-01T07:00:00.000000+00:00 host sshd[106]: Accepted publickey for alice from 2001:db8::10 port 1005 ssh2
+line without timestamp

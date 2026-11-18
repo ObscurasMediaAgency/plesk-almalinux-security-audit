@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, TypeVar
 
+from plesk_audit.config import LogsConfig
 from plesk_audit.file_reader import DirListResult, FileReader, FileReadResult
 from plesk_audit.models import CollectorResult, CollectorStatus, Evidence
 from plesk_audit.safe_exec import CommandExecutor, CommandResult
@@ -20,6 +21,7 @@ class CollectorContext:
     commands: CommandExecutor
     files: FileReader
     now: Callable[[], datetime]
+    logs: LogsConfig | None = None
 
 
 CollectorFn = Callable[[CollectorContext], CollectorResult]

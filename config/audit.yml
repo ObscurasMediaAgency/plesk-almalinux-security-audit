@@ -21,6 +21,7 @@ collectors:
   ssh: true
   plesk: true
   web_stack: true
+  persistence: true
   logs: false
 logs:
   enabled: false

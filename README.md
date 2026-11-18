@@ -53,7 +53,7 @@ plesk-audit collect --config config/audit.yml [--output /secure/reports] [--prof
 Reports are written to a new `run-<timestamp>-<id>/` directory (mode `0700`, files `0600`); existing runs are never overwritten. Exit codes: `0` success, `1` output error, `2` configuration error.
 
 ## Status
-Implemented: safe command runner, bounded file reader, strict config validation, `system`, `packages`, `services`, `network`, `accounts`, `ssh`, `security_controls` and `plesk` collectors, first finding rules, JSON and HTML reporting. All other collectors report `skipped` (`not implemented yet`). See `docs/collectors.md` for sources, privileges and data. Validate on a test VM before running on production.
+Implemented: safe command runner, bounded file reader, strict config validation, `system`, `packages`, `services`, `network`, `accounts`, `ssh`, `security_controls` and `plesk` collectors, triage-profile `persistence` and `logs` collectors, first finding rules, JSON and HTML reporting. All other collectors report `skipped` (`not implemented yet`). See `docs/collectors.md` for sources, privileges and data. Validate on a test VM before running on production.
 
 ## Planned audit domains
 1. Host baseline: OS, kernel, uptime, time synchronization.
@@ -85,7 +85,7 @@ Do not commit real production reports. Reports may contain hostnames, IP address
 2. ~~Host, package, service, network and account collectors.~~ Done.
 3. ~~SSH, SELinux, firewalld and Fail2Ban checks.~~ Done.
 4. ~~Plesk-specific read-only inventory for the installed build.~~ Done (output formats marked VERIFY).
-5. Bounded log triage and compromise indicators.
+5. ~~Bounded log triage and compromise indicators.~~ Done (`--profile triage`).
 6. JSON/HTML reporting and tests. (Initial version done.)
 7. Explicitly opt-in external validation.
 8. Validation on a disposable AlmaLinux 9.9 + Plesk VM.

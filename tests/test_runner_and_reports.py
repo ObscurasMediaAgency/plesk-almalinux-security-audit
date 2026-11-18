@@ -32,6 +32,9 @@ def test_run_audit_statuses_and_metadata(healthy_host_ctx: CollectorContext) -> 
     assert statuses["network"][0] == "partial"
     assert statuses["packages"] == ("ok", None)
     assert statuses["web_stack"] == ("skipped", "not implemented yet")
+    assert statuses["persistence"] == ("skipped", "requires profile 'triage'")
+    triage = {c.name: c.status for c in audit(healthy_host_ctx, profile="triage").collectors}
+    assert triage["persistence"] == "ok"
     assert statuses["logs"] == ("skipped", "disabled in configuration")
     assert result.run.hostname == "host.example.test"
     assert result.run.plesk_version == "18.0.82.31"
