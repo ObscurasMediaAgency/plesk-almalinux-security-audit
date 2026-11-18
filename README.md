@@ -53,7 +53,7 @@ plesk-audit collect --config config/audit.yml [--output /secure/reports] [--prof
 Reports are written to a new `run-<timestamp>-<id>/` directory (mode `0700`, files `0600`); existing runs are never overwritten. Exit codes: `0` success, `1` output error, `2` configuration error.
 
 ## Status
-Implemented: safe command runner, bounded file reader, strict config validation, `system`, `packages`, `services`, `network` and `accounts` collectors, first finding rules, JSON and HTML reporting. All other collectors report `skipped` (`not implemented yet`). See `docs/collectors.md` for sources, privileges and data. Validate on a test VM before running on production.
+Implemented: safe command runner, bounded file reader, strict config validation, `system`, `packages`, `services`, `network`, `accounts`, `ssh` and `security_controls` collectors, first finding rules, JSON and HTML reporting. All other collectors report `skipped` (`not implemented yet`). See `docs/collectors.md` for sources, privileges and data. Validate on a test VM before running on production.
 
 ## Planned audit domains
 1. Host baseline: OS, kernel, uptime, time synchronization.
@@ -83,7 +83,7 @@ Do not commit real production reports. Reports may contain hostnames, IP address
 ## Roadmap
 1. ~~Safe command runner, timeout/output limits and redaction.~~ Done.
 2. ~~Host, package, service, network and account collectors.~~ Done.
-3. SSH, SELinux, firewalld and Fail2Ban checks.
+3. ~~SSH, SELinux, firewalld and Fail2Ban checks.~~ Done.
 4. Plesk-specific read-only inventory for the installed build.
 5. Bounded log triage and compromise indicators.
 6. JSON/HTML reporting and tests. (Initial version done.)

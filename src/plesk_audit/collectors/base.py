@@ -59,7 +59,11 @@ class Collection:
         self.notes.append(reason)
 
     def command(self, name: str, ok_codes: Container[int] = (0,)) -> CommandResult | None:
-        result = self.ctx.commands.run(name)
+        return self.check(self.ctx.commands.run(name), ok_codes)
+
+    def check(self, result: CommandResult, ok_codes: Container[int] = (0,)) -> CommandResult | None:
+        """Return the result if usable, otherwise record a failure and return None."""
+        name = result.name
         if result.status in ("ok", "nonzero") and result.returncode in ok_codes:
             if result.stdout_truncated:
                 self.note(f"{name}: output truncated")

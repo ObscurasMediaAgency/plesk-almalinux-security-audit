@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from plesk_audit.collectors import accounts, network, packages, services, system
+from plesk_audit.collectors import (
+    accounts,
+    network,
+    packages,
+    security_controls,
+    services,
+    ssh,
+    system,
+)
 from plesk_audit.collectors.base import CollectorContext
 from plesk_audit.file_reader import FileReadResult
 from plesk_audit.safe_exec import CommandResult
@@ -115,7 +123,7 @@ def test_services_merge_and_failed(healthy_host_ctx: CollectorContext) -> None:
     assert data["failed"] == ["backup-example.service"]
     cups = next(u for u in data["units"] if u["unit"] == "cups.service")
     assert (cups["load"], cups["unit_file_state"]) == ("not-loaded", "disabled")
-    assert data["enabled_count"] == 3
+    assert data["enabled_count"] == 6
 
 
 def test_accounts_collects_metadata_without_secrets(healthy_host_ctx: CollectorContext) -> None:
@@ -154,3 +162,81 @@ def test_accounts_skips_disallowed_sudoers_names_and_reports_denied() -> None:
     assert result.status == "partial"
     assert "/etc/sudoers: permission_denied" in (result.message or "")
     assert "EV-accounts-sudoers" not in {e.evidence_id for e in result.evidence}
+
+
+def test_ssh_keeps_only_allow_listed_directives(healthy_host_ctx: CollectorContext) -> None:
+    result = ssh.collect(healthy_host_ctx)
+    assert result.status == "ok"
+    config = result.evidence[0].data
+    assert config["permitrootlogin"] == "without-password"
+    assert config["listenaddress"] == ["[::]:22", "0.0.0.0:22"]
+    assert "hmac-sha1" in config["macs"]
+    assert "hostkey" not in config and "addressfamily" not in config
+
+
+def test_ssh_error_without_root() -> None:
+    denied = CommandResult(
+        "sshd_effective",
+        ("sshd", "-T"),
+        "nonzero",
+        returncode=1,
+        stderr="sshd: no hostkeys available\n",
+    )
+    result = ssh.collect(make_ctx(commands={"sshd_effective": denied}))
+    assert result.status == "error"
+    assert result.message == "sshd_effective: nonzero (sshd: no hostkeys available)"
+
+
+def test_security_controls_full(healthy_host_ctx: CollectorContext) -> None:
+    result = security_controls.collect(healthy_host_ctx)
+    assert (result.status, result.message) == ("ok", None)
+    data = {e.evidence_id: e.data for e in result.evidence}
+    assert data["EV-security_controls-selinux"] == {
+        "runtime_mode": "enforcing",
+        "config_mode": "enforcing",
+        "config_type": "targeted",
+    }
+    fw = data["EV-security_controls-firewalld"]
+    public, trusted = fw["zones"]
+    assert (public["name"], public["active"], public["default"]) == ("public", True, True)
+    assert public["interfaces"] == ["eth0"] and "8443/tcp" in public["ports"]
+    assert public["rich_rules"] == [
+        'rule family="ipv4" source address="192.0.2.10" port port="3306" protocol="tcp" accept'
+    ]
+    assert (trusted["target"], trusted["active"], trusted["default"]) == ("ACCEPT", False, False)
+    assert data["EV-security_controls-fail2ban"]["jails"] == [
+        "plesk-apache",
+        "plesk-dovecot",
+        "ssh",
+    ]
+
+
+def test_firewalld_not_running_and_fail2ban_missing() -> None:
+    stopped = CommandResult(
+        "firewalld_state",
+        ("firewall-cmd", "--state"),
+        "nonzero",
+        returncode=252,
+        stdout="not running\n",
+    )
+    ctx = make_ctx(commands={"firewalld_state": stopped, "getenforce": "Permissive\n"})
+    result = security_controls.collect(ctx)
+    data = {e.evidence_id: e.data for e in result.evidence}
+    assert data["EV-security_controls-firewalld"] == {
+        "running": False,
+        "default_zone": None,
+        "zones": None,
+    }
+    assert data["EV-security_controls-fail2ban"] == {"installed": False, "jails": None}
+    assert data["EV-security_controls-selinux"]["runtime_mode"] == "permissive"
+    assert "firewalld_zones" not in ctx.commands.calls  # type: ignore[attr-defined]
+    assert result.status == "ok"
+
+
+def test_parse_zones_rejects_garbage() -> None:
+    import pytest
+
+    with pytest.raises(ValueError):
+        security_controls.parse_zones("  target: default\n")
+    with pytest.raises(ValueError):
+        security_controls.parse_fail2ban_status("Sorry, permission denied\n")

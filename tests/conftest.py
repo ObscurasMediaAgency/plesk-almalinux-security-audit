@@ -90,6 +90,12 @@ def healthy_host_ctx() -> CollectorContext:
             "dnf_security_updates": fixture_text("dnf-updateinfo-security.txt"),
             "systemctl_units": fixture_text("systemctl-list-units.txt"),
             "systemctl_unit_files": fixture_text("systemctl-list-unit-files.txt"),
+            "sshd_effective": fixture_text("sshd-T.txt"),
+            "getenforce": "Enforcing\n",
+            "firewalld_state": "running\n",
+            "firewalld_default_zone": "public\n",
+            "firewalld_zones": fixture_text("firewalld-list-all-zones.txt"),
+            "fail2ban_status": fixture_text("fail2ban-status.txt"),
         },
         files={
             "/etc/os-release": fixture_text("os-release-almalinux-9.9.txt"),
@@ -102,6 +108,7 @@ def healthy_host_ctx() -> CollectorContext:
             "/etc/sudoers": fixture_text("sudoers.txt"),
             "/etc/sudoers.d/deploy": "deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart nginx\n",
             "/root/.ssh/authorized_keys": fixture_text("authorized-keys.txt"),
+            "/etc/selinux/config": fixture_text("selinux-config.txt"),
         },
         dirs={"/etc/sudoers.d": [dir_entry("deploy", mode="0440")]},
     )

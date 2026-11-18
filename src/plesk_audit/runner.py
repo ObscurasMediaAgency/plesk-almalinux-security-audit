@@ -28,8 +28,9 @@ STATIC_LIMITATIONS = (
         "root-level attacker access and incomplete telemetry can conceal activity."
     ),
     (
-        "Firewall state (firewalld, Plesk Firewall) is not yet evaluated, so listener exposure "
-        "is reported as bind scope only."
+        "Listener exposure is assessed against firewalld only; direct nftables/iptables rules, "
+        "Plesk Firewall rules not applied via firewalld and upstream/provider firewalls are not "
+        "evaluated."
     ),
 )
 

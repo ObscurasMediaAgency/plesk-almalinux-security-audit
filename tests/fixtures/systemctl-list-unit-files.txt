@@ -2,3 +2,6 @@ sshd.service           enabled  enabled
 backup-example.service enabled  disabled
 dnf-makecache.timer    enabled  enabled
 cups.service           disabled disabled
+auditd.service         enabled  enabled
+fail2ban.service       enabled  disabled
+firewalld.service      enabled  enabled

@@ -6,7 +6,7 @@ from collections.abc import Iterable, Sequence
 from datetime import datetime
 
 from plesk_audit.models import Evidence, Finding
-from plesk_audit.rules import host_rules, network_rules, system_rules
+from plesk_audit.rules import hardening_rules, host_rules, network_rules, system_rules
 from plesk_audit.rules.base import Rule
 
 RULES: Sequence[Rule] = (
@@ -20,6 +20,15 @@ RULES: Sequence[Rule] = (
     host_rules.extra_uid0,
     host_rules.sudo_nopasswd,
     host_rules.root_authorized_keys,
+    hardening_rules.ssh_root_login,
+    hardening_rules.ssh_password_auth,
+    hardening_rules.ssh_empty_passwords,
+    hardening_rules.ssh_weak_algorithms,
+    hardening_rules.firewalld_not_running,
+    hardening_rules.firewalld_accept_zone,
+    hardening_rules.selinux_not_enforcing,
+    hardening_rules.fail2ban_inactive,
+    hardening_rules.auditd_inactive,
 )
 
 

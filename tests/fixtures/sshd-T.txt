@@ -1,0 +1,16 @@
+port 22
+addressfamily any
+listenaddress [::]:22
+listenaddress 0.0.0.0:22
+usepam yes
+permitrootlogin without-password
+passwordauthentication yes
+kbdinteractiveauthentication no
+permitemptypasswords no
+pubkeyauthentication yes
+x11forwarding yes
+maxauthtries 6
+hostkey /etc/ssh/ssh_host_ed25519_key
+ciphers aes256-gcm@openssh.com,chacha20-poly1305@openssh.com,aes256-ctr,aes128-gcm@openssh.com,aes128-ctr
+macs hmac-sha2-256-etm@openssh.com,hmac-sha1-etm@openssh.com,hmac-sha2-256,hmac-sha1
+kexalgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group14-sha256

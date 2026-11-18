@@ -71,6 +71,16 @@ ALLOWED_COMMANDS: Mapping[str, tuple[str, ...]] = MappingProxyType(
             "--no-pager",
             "--plain",
         ),
+        # VERIFY: requires root; prints the effective config without changing state.
+        "sshd_effective": ("sshd", "-T"),
+        "getenforce": ("getenforce",),
+        # Exit code 252 means "not running" (an observation, not an error).
+        "firewalld_state": ("firewall-cmd", "--state"),
+        "firewalld_default_zone": ("firewall-cmd", "--get-default-zone"),
+        # VERIFY: zone header/indentation format of firewalld on AlmaLinux 9.9.
+        "firewalld_zones": ("firewall-cmd", "--list-all-zones"),
+        # VERIFY: requires root (socket access); output format of fail2ban 1.x.
+        "fail2ban_status": ("fail2ban-client", "status"),
         "systemctl_unit_files": (
             "systemctl",
             "list-unit-files",

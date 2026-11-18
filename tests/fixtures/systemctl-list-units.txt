@@ -1,3 +1,6 @@
 sshd.service            loaded active running OpenSSH server daemon
 ● backup-example.service loaded failed failed  Example backup job
 dnf-makecache.timer     loaded active waiting dnf makecache --timer
+auditd.service          loaded active running Security Auditing Service
+fail2ban.service        loaded active running Fail2Ban Service
+firewalld.service       loaded active running firewalld - dynamic firewall daemon

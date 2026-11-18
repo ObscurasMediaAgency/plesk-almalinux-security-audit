@@ -5,7 +5,15 @@ from __future__ import annotations
 from collections.abc import Mapping
 from types import MappingProxyType
 
-from plesk_audit.collectors import accounts, network, packages, services, system
+from plesk_audit.collectors import (
+    accounts,
+    network,
+    packages,
+    security_controls,
+    services,
+    ssh,
+    system,
+)
 from plesk_audit.collectors.base import CollectorContext, CollectorFn
 
 IMPLEMENTED: Mapping[str, CollectorFn] = MappingProxyType(
@@ -15,6 +23,8 @@ IMPLEMENTED: Mapping[str, CollectorFn] = MappingProxyType(
         services.NAME: services.collect,
         network.NAME: network.collect,
         accounts.NAME: accounts.collect,
+        security_controls.NAME: security_controls.collect,
+        ssh.NAME: ssh.collect,
     }
 )
 
