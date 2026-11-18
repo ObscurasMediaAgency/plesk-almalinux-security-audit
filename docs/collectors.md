@@ -108,6 +108,20 @@ Implemented collectors, their sources, required privileges and collected data. C
 - Timestamps: classic syslog timestamps are interpreted in the host's local timezone with year inference; RFC 3339 timestamps are also accepted.
 - **VERIFY:** rsyslog timestamp format and the sshd/sudo/Postfix/Dovecot message formats on the installed build.
 
+## `external` (separate `plesk-audit external` command)
+Not a local collector: it runs only via `plesk-audit external --config … --confirm-authorized` and never as part of `collect`.
+
+| Evidence ID | Source | Data |
+|---|---|---|
+| `EV-external-scope` | configuration | probed targets with resolved addresses, port list, timeout, probe interval, probe count |
+| `EV-external-ports` | TCP connect | per target and port: service label and state (`open`, `closed`, `filtered`, `error`) |
+| `EV-external-tls` | TLS handshake (`tls_test_enabled`) | per open implicit-TLS port (443, 465, 993, 995, 8443): certificate verification result/error, negotiated protocol, expiry and days remaining, TLS 1.0/1.1 acceptance (`accepted`, `rejected`, `client_unsupported`, `error`) |
+
+- Opt-in: `audit.external_checks: true` plus 1–5 entries in `external.allowed_targets`, each a public (global) IP address or a fully qualified hostname. CIDR ranges, wildcards, URLs, ports, private/loopback/documentation addresses and duplicates are rejected. `external.nmap_enabled` must stay `false`.
+- Hostnames are resolved once; only the first public address is probed, non-public resolved addresses are skipped.
+- Fixed port list in code: 21, 22, 25, 80, 106, 110, 143, 443, 465, 587, 993, 995, 3306, 5432, 6379, 8443, 8880, 11211. Probes are sequential with a 0.5 s pause and a timeout of `min(runtime.command_timeout_seconds, 5)` s. No payloads, banners, logins or STARTTLS negotiation.
+- Legacy TLS tests need a client OpenSSL that still allows TLS 1.0/1.1 at `SECLEVEL=0`; otherwise the result is `client_unsupported` (not evidence of a secure server).
+
 ## Rules
 | ID | Evidence | Severity | Condition |
 |---|---|---|---|
@@ -138,3 +152,6 @@ Implemented collectors, their sources, required privileges and collected data. C
 | `PER-001` | ld-preload | high / needs_review | `/etc/ld.so.preload` lists libraries |
 | `PER-002` | cron/systemd/profile | info / needs_review, low confidence | files or symlinks modified in the last 7 days |
 | `PER-003` | cron/systemd/profile | medium / needs_review | world-writable entries, or non-root owned entries outside `/var/spool/cron` |
+| `EXT-001` | external ports | high | MySQL, PostgreSQL, Redis, Memcached or poppassd reachable from the auditor |
+| `EXT-002` | external tls | medium | TLS 1.0 or 1.1 handshake accepted |
+| `EXT-003` | external tls | high if certificate verification fails, medium if it expires in < 14 days | certificate invalid or expiring |

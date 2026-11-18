@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 import uuid
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
@@ -11,7 +12,8 @@ from pathlib import Path
 
 from plesk_audit import __version__
 from plesk_audit.collectors import IMPLEMENTED, CollectorContext, CollectorFn
-from plesk_audit.config import KNOWN_COLLECTORS, AuditConfig, load_config
+from plesk_audit.config import KNOWN_COLLECTORS, AuditConfig, ConfigError, load_config
+from plesk_audit.external import Prober, SocketProber, run_external_checks
 from plesk_audit.file_reader import BoundedFileReader
 from plesk_audit.models import AuditRun, CollectorResult, Evidence, RunMetadata
 from plesk_audit.redaction import redact_text
@@ -31,6 +33,19 @@ STATIC_LIMITATIONS = (
         "Listener exposure is assessed against firewalld only; direct nftables/iptables rules, "
         "Plesk Firewall rules not applied via firewalld and upstream/provider firewalls are not "
         "evaluated."
+    ),
+)
+
+
+EXTERNAL_LIMITATIONS = (
+    (
+        "External results reflect only the auditor's source address and network path; "
+        "firewall allow-lists, geo-blocking or upstream filtering can produce different "
+        "results for other clients."
+    ),
+    (
+        "Only TCP connects and implicit-TLS handshakes are tested; STARTTLS services, UDP, "
+        "application-layer behaviour and vulnerabilities are not assessed."
     ),
 )
 
@@ -144,4 +159,63 @@ def collect(
         logs=config.logs,
     )
     audit = run_audit(config, ctx, profile=profile)
+    return write_reports(audit, output_dir or config.output_directory, config.output_formats)
+
+
+def run_external(
+    config: AuditConfig,
+    ctx: CollectorContext,
+    prober: Prober,
+    *,
+    run_id: str | None = None,
+    sleep: Callable[[float], None] = time.sleep,
+) -> AuditRun:
+    """Run the opt-in external validation; local collectors are not executed."""
+    if not config.external.enabled or not config.external.allowed_targets:
+        raise ConfigError("external validation requires audit.external_checks and targets")
+    started = ctx.now()
+    result = run_external_checks(
+        config.external,
+        ctx,
+        prober,
+        timeout=config.runtime.command_timeout_seconds,
+        sleep=sleep,
+    )
+    if result.message:
+        result.message = redact_text(result.message)
+    findings, rule_failures = evaluate(result.evidence, ctx.now())
+    limitations = [*STATIC_LIMITATIONS[:1], *EXTERNAL_LIMITATIONS]
+    if result.status in ("error", "partial"):
+        limitations.append(f"collector external {result.status}: {result.message}")
+    limitations += rule_failures
+    run = RunMetadata(
+        run_id=run_id or uuid.uuid4().hex,
+        tool_version=__version__,
+        profile="external",
+        started_at=started,
+        finished_at=ctx.now(),
+        hostname=None,
+        os=None,
+        plesk_version=None,
+        external_checks=True,
+    )
+    return AuditRun(run, [result], findings, limitations)
+
+
+def external(
+    config_path: Path,
+    output_dir: Path | None,
+    *,
+    prober: Prober | None = None,
+    now: Callable[[], datetime] = utc_now,
+) -> Path:
+    config = load_config(config_path)
+    ctx = CollectorContext(
+        commands=SafeCommandRunner(
+            config.runtime.command_timeout_seconds, config.runtime.max_command_output_bytes
+        ),
+        files=BoundedFileReader(config.runtime.max_file_bytes),
+        now=now,
+    )
+    audit = run_external(config, ctx, prober or SocketProber())
     return write_reports(audit, output_dir or config.output_directory, config.output_formats)

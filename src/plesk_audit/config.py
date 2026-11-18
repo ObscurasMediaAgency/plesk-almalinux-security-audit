@@ -1,11 +1,15 @@
 """Strict loading and validation of ``audit.yml``.
 
 The configuration can only enable/disable in-code collectors and tune limits. It can never
-supply commands, and unsafe modes (non-read-only, external checks) are rejected.
+supply commands, and unsafe modes (non-read-only, nmap) are rejected. External validation
+is opt-in: it needs ``audit.external_checks: true`` plus an explicit list of public targets,
+and runs only through the separate ``external`` CLI command.
 """
 
 from __future__ import annotations
 
+import ipaddress
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -30,6 +34,8 @@ KNOWN_COLLECTORS = (
     "logs",
 )
 MAX_CONFIG_BYTES = 64 * 1024
+MAX_EXTERNAL_TARGETS = 5
+_HOSTNAME_LABEL = re.compile(r"^(?!-)[a-z0-9-]{1,63}(?<!-)$")
 
 
 class ConfigError(ValueError):
@@ -52,6 +58,13 @@ class LogsConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class ExternalConfig:
+    enabled: bool
+    allowed_targets: tuple[str, ...]
+    tls_test_enabled: bool
+
+
+@dataclass(frozen=True, slots=True)
 class AuditConfig:
     profile: str
     runtime: RuntimeConfig
@@ -59,6 +72,7 @@ class AuditConfig:
     output_formats: frozenset[str]
     collectors: dict[str, bool]
     logs: LogsConfig
+    external: ExternalConfig = ExternalConfig(False, (), False)
 
 
 def _section(raw: dict[str, Any], key: str, allowed: set[str]) -> dict[str, Any]:
@@ -85,6 +99,53 @@ def _int(section: dict[str, Any], key: str, where: str, low: int, high: int) -> 
     return value
 
 
+def validate_target(value: object) -> str:
+    """Accept a single public IP address or a fully qualified hostname; nothing broader."""
+    if not isinstance(value, str) or not value or value != value.strip():
+        raise ConfigError("external targets must be non-empty strings without whitespace")
+    try:
+        address = ipaddress.ip_address(value)
+    except ValueError:
+        name = value.lower().rstrip(".")
+        labels = name.split(".")
+        if (
+            len(name) > 253
+            or len(labels) < 2
+            or not all(_HOSTNAME_LABEL.match(label) for label in labels)
+            or labels[-1].isdigit()
+        ):
+            raise ConfigError(
+                f"external target {value!r} must be a public IP address or a fully qualified "
+                "hostname (no CIDR ranges, wildcards, ports or URLs)"
+            ) from None
+        return name
+    if not address.is_global:
+        raise ConfigError(f"external target {value!r} is not a public (global) IP address")
+    return str(address)
+
+
+def _external(raw: dict[str, Any], enabled: bool) -> ExternalConfig:
+    ext = _section(raw, "external", {"allowed_targets", "nmap_enabled", "tls_test_enabled"})
+    if _bool(ext, "nmap_enabled", "external"):
+        raise ConfigError("'external.nmap_enabled' must be false; nmap is never used")
+    tls = _bool(ext, "tls_test_enabled", "external")
+    targets = ext.get("allowed_targets")
+    if not isinstance(targets, list) or len(targets) > MAX_EXTERNAL_TARGETS:
+        raise ConfigError(
+            f"'external.allowed_targets' must be a list of at most {MAX_EXTERNAL_TARGETS} targets"
+        )
+    normalized = tuple(validate_target(t) for t in targets)
+    if len(set(normalized)) != len(normalized):
+        raise ConfigError("'external.allowed_targets' contains duplicates")
+    if enabled and not normalized:
+        raise ConfigError("'audit.external_checks' requires 'external.allowed_targets'")
+    if not enabled and (normalized or tls):
+        raise ConfigError(
+            "'external' settings require 'audit.external_checks: true' (explicit opt-in)"
+        )
+    return ExternalConfig(enabled, normalized, tls)
+
+
 def parse_config(raw: object) -> AuditConfig:
     if not isinstance(raw, dict):
         raise ConfigError("configuration root must be a mapping")
@@ -97,8 +158,7 @@ def parse_config(raw: object) -> AuditConfig:
         raise ConfigError(f"'audit.profile' must be one of {', '.join(PROFILES)}")
     if _bool(audit, "read_only", "audit") is not True:
         raise ConfigError("'audit.read_only' must be true; state-changing modes do not exist")
-    if _bool(audit, "external_checks", "audit"):
-        raise ConfigError("'audit.external_checks' is not implemented and must be false")
+    external_enabled = _bool(audit, "external_checks", "audit")
 
     rt = _section(
         raw, "runtime", {"command_timeout_seconds", "max_command_output_bytes", "max_file_bytes"}
@@ -140,13 +200,7 @@ def parse_config(raw: object) -> AuditConfig:
         sources=tuple(sources),
     )
 
-    ext = _section(raw, "external", {"allowed_targets", "nmap_enabled", "tls_test_enabled"})
-    if (
-        ext.get("allowed_targets") != []
-        or _bool(ext, "nmap_enabled", "external")
-        or _bool(ext, "tls_test_enabled", "external")
-    ):
-        raise ConfigError("external validation is not implemented; 'external' must stay disabled")
+    external = _external(raw, external_enabled)
 
     return AuditConfig(
         profile=audit["profile"],
@@ -155,6 +209,7 @@ def parse_config(raw: object) -> AuditConfig:
         output_formats=frozenset(formats),
         collectors=collectors,
         logs=logs,
+        external=external,
     )
 
 

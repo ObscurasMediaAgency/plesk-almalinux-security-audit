@@ -31,6 +31,7 @@ logs:
     - /var/log/secure
     - /var/log/messages
     - /var/log/maillog
+# Opt-in only: needs audit.external_checks: true and is used solely by `plesk-audit external`.
 external:
   allowed_targets: []
   nmap_enabled: false

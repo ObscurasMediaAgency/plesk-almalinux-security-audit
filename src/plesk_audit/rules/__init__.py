@@ -7,6 +7,7 @@ from datetime import datetime
 
 from plesk_audit.models import Evidence, Finding
 from plesk_audit.rules import (
+    external_rules,
     hardening_rules,
     host_rules,
     network_rules,
@@ -44,6 +45,9 @@ RULES: Sequence[Rule] = (
     triage_rules.ld_preload,
     triage_rules.recent_persistence_changes,
     triage_rules.unsafe_persistence_permissions,
+    external_rules.backend_reachable,
+    external_rules.legacy_tls_accepted,
+    external_rules.certificate_problems,
 )
 
 
